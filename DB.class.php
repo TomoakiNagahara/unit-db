@@ -258,7 +258,7 @@ class DB
 
 		//	...
 		if( $sql = QQL::Select($qql, $option, $this) ){
-			return strpos($sql, ' LIMIT 1 ') ? $this->Query($sql)[0]: $this->Query($sql);
+			return $this->Query($sql);
 		}
 
 		//	...
