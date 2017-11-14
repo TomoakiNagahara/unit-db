@@ -200,12 +200,17 @@ class QQL
 		//	...
 		$query = "SELECT $field FROM $table $where $order $limit $offset";
 
-		//	...
+		//	"LIMIT 1" --> 1
 		$limit = (int)substr($limit, strpos($limit, ' ')+1);
 
 		//	...
 		if(!$record = $_db->Query($query)){
 			return null;
+		}
+
+		//	QQL is " name <- t_table.id = $id " and limit is 1.
+		if( $limit === 1 and count($record) === 1 ){
+			return array_shift($record);
 		}
 
 		//	...
