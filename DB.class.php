@@ -142,7 +142,13 @@ class DB
 	function Connect($config)
 	{
 		//	...
-		switch( $config['driver'] ){
+		if(!$driver = ifset($config['driver']) ){
+			Notice::Set('Has not been set driver.');
+			return;
+		}
+
+		//	...
+		switch( $driver ){
 				case 'mysql':
 					if(!self::_GetDsnMySQL($config, $dsn, $user, $password, $options) ){
 						return false;
