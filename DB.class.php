@@ -174,6 +174,15 @@ class DB
 		return $this->_connection;
 	}
 
+	/** Get product name.
+	 *
+	 * @return string $driver
+	 */
+	function Driver()
+	{
+		return $this->_config['driver'];
+	}
+
 	/** Get PDO instance.
 	 *
 	 * @return PDO
