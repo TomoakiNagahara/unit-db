@@ -245,6 +245,53 @@ class DB
 		//	...
 		switch( strtolower($type) ){
 			case 'show':
+				//	...
+				$column = strpos($query, 'SHOW FULL COLUMNS FROM') === 0 ? true: false;
+				$index  = strpos($query, 'SHOW INDEX FROM')        === 0 ? true: false;
+
+				//	...
+				foreach( $statement->fetchAll(PDO::FETCH_ASSOC) as $temp ){
+					if( $column ){
+						$name = $temp['Field'];
+						foreach( $temp as $key => $val ){
+							//	...
+							$key = lcfirst($key);
+
+							//	...
+							if( $st = strpos($val, '(') and $en = strpos($val, ')') ){
+								$type   = substr($val, 0, $st);
+								$length = substr($val, $st+1, $en - $st -1 );
+								$length = (int)$length;
+								$result[$name]['type']   = $type;
+								$result[$name]['length'] = $length;
+								continue;
+							}
+
+							//	...
+							if( $key === 'null' ){
+								$val = $val === 'YES' ? true: false;
+							}
+
+							//	...
+							if( $key === 'key' ){
+								$val = strtolower($val);
+							}
+
+							//	...
+							$result[$name][$key] = $val;
+						}
+					}else if( $index ){
+						$name = $temp['Key_name'];
+						$seq  = $temp['Seq_in_index'];
+						$result[$name][$seq] = $temp;
+					}else{
+						foreach( $temp as $key => $val ){
+							$result[] = $val;
+						}
+					}
+				}
+				break;
+
 			case 'select':
 				$result = $statement->fetchAll(PDO::FETCH_ASSOC);
 				if( strpos($query.' ', ' LIMIT 1 ') and $result ){
