@@ -276,7 +276,8 @@ class DB
 				d($type);
 		}
 
-		return $result;
+		//	...
+		return isset($result) ? $result: [];
 	}
 
 	/** Quick Query Language.
