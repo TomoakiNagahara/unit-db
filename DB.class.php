@@ -272,6 +272,10 @@ class DB
 				$result = true;
 				break;
 
+			case 'set':
+				$result = true;
+				break;
+
 			default:
 				d($type);
 		}
