@@ -11,6 +11,9 @@
 //	...
 spl_autoload_register( function($path){
 	//	...
+	$namespace = 'OP\UNIT\DB\\';
+
+	//	...
 	if( strpos($path, $namespace) !== 0 ){
 		return;
 	}

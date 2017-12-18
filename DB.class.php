@@ -9,6 +9,12 @@
  * @copyright Tomoaki Nagahara All right reserved.
  */
 
+/** namespace
+ *
+ * @created   2017-12-18
+ */
+namespace OP\UNIT\DB;
+
 /** DB
  *
  * @created   2016-11-28
@@ -22,7 +28,7 @@ class DB
 	/** trait
 	 *
 	 */
-	use OP_CORE;
+	use \OP_CORE;
 
 	/** Save connection configuration.
 	 *
@@ -38,7 +44,7 @@ class DB
 
 	/** PDO instance handle.
 	 *
-	 * @var PDO
+	 * @var \PDO
 	 */
 	private $_pdo;
 
@@ -98,8 +104,8 @@ class DB
 	private function _GetDsnMySQL($config, &$dsn, &$user, &$password, &$options)
 	{
 		//	Error check. (错误检查, 錯誤檢查)
-		if(!defined('PDO::MYSQL_ATTR_INIT_COMMAND') ){
-			Notice::Set("Please install MySQL driver for PHP.");
+		if(!defined('\PDO::MYSQL_ATTR_INIT_COMMAND') ){
+			\Notice::Set("Please install MySQL driver for PHP.");
 			return false;
 		}
 
@@ -108,7 +114,7 @@ class DB
 			if( isset($config[$key]) ){
 				$this->_config[$key] = ${$key} = $config[$key];
 			}else{
-				Notice::Set("Has not been set this key's value. ($key)");
+				\Notice::Set("Has not been set this key's value. ($key)");
 				return false;
 			}
 		}
@@ -117,13 +123,13 @@ class DB
 		$dsn = "{$driver}:host={$host}";
 
 		//	Character set. (指定字符代码, 指定字符代碼)
-		$options[PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES '{$charset}'";
+		$options[\PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES '{$charset}'";
 
 		//	Multi statement. (多个指令, 多個指令)
-		$options[PDO::MYSQL_ATTR_MULTI_STATEMENTS] = false;
+		$options[\PDO::MYSQL_ATTR_MULTI_STATEMENTS] = false;
 
 		//	Persistent connect. (持续连接, 持續連接)
-		$options[PDO::ATTR_PERSISTENT] = false;
+		$options[\PDO::ATTR_PERSISTENT] = false;
 
 		//	Select the database. (选择数据库, 選擇數據庫)
 		if( isset($config['database']) ){
@@ -143,7 +149,7 @@ class DB
 	{
 		//	...
 		if(!$driver = ifset($config['driver']) ){
-			Notice::Set('Has not been set driver.');
+			\Notice::Set('Has not been set driver.');
 			return;
 		}
 
@@ -156,18 +162,18 @@ class DB
 					break;
 
 				default:
-					Notice::Set("This driver has not been supported yet. ($driver)");
+					\Notice::Set("This driver has not been supported yet. ($driver)");
 					return false;
 		}
 
 		//	...
 		try{
 			$this->_queries[] = $dsn;
-			$this->_pdo = new PDO($dsn, $user, $password, $options);
+			$this->_pdo = new \PDO($dsn, $user, $password, $options);
 			$this->_connection = true;
 		}catch(Throwable $e){
 			$this->_connection = false;
-			Notice::Set($e->getMessage() . " ($dsn, $user)");
+			\Notice::Set($e->getMessage() . " ($dsn, $user)");
 		}
 
 		//	...
@@ -203,7 +209,7 @@ class DB
 
 	/** Get PDO instance.
 	 *
-	 * @return PDO
+	 * @return \PDO
 	 */
 	function GetPDO()
 	{
@@ -237,7 +243,7 @@ class DB
 	{
 		//	...
 		if(!$this->_pdo){
-			Notice::Set("Has not been instantiate PDO.", debug_backtrace());
+			\Notice::Set("Has not been instantiate PDO.", debug_backtrace());
 			return false;
 		}
 
@@ -251,7 +257,7 @@ class DB
 			$state = $errorinfo[0];
 			$errno = $errorinfo[1];
 			$error = $errorinfo[2];
-			Notice::Set("[$state($errno)] $error", debug_backtrace());
+			\Notice::Set("[$state($errno)] $error", debug_backtrace());
 			return false;
 		}
 
@@ -268,7 +274,7 @@ class DB
 				$index  = strpos($query, 'SHOW INDEX FROM')        === 0 ? true: false;
 
 				//	...
-				foreach( $statement->fetchAll(PDO::FETCH_ASSOC) as $temp ){
+				foreach( $statement->fetchAll(\PDO::FETCH_ASSOC) as $temp ){
 					if( $column ){
 						$name = $temp['Field'];
 						foreach( $temp as $key => $val ){
@@ -311,14 +317,14 @@ class DB
 				break;
 
 			case 'select':
-				$result = $statement->fetchAll(PDO::FETCH_ASSOC);
+				$result = $statement->fetchAll(\PDO::FETCH_ASSOC);
 				if( strpos($query.' ', ' LIMIT 1 ') and $result ){
 					$result = $result[0];
 				}
 				break;
 
 			case 'count':
-				$result = $statement->fetchAll(PDO::FETCH_ASSOC);
+				$result = $statement->fetchAll(\PDO::FETCH_ASSOC);
 				$result = $result[0]['COUNT(*)'];
 				break;
 
