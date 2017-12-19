@@ -183,6 +183,15 @@ class DB
 		return $this->_config['driver'];
 	}
 
+	/** Get host name.
+	 *
+	 * @return string $host
+	 */
+	function Host()
+	{
+		return $this->_config['host'];
+	}
+
 	/** Get PDO instance.
 	 *
 	 * @return PDO
