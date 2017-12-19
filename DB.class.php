@@ -192,6 +192,15 @@ class DB
 		return $this->_config['host'];
 	}
 
+	/** Get port number.
+	 *
+	 * @return string $port
+	 */
+	function Port()
+	{
+		return $this->_config['port'];
+	}
+
 	/** Get PDO instance.
 	 *
 	 * @return PDO
