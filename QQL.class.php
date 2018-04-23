@@ -9,6 +9,12 @@
  * @copyright Tomoaki Nagahara All right reserved.
  */
 
+/** namespace
+ *
+ * @created   2017-12-18
+ */
+namespace OP\UNIT\DB;
+
 /**
  * QQL
  *
@@ -23,13 +29,13 @@ class QQL
 	/** trait
 	 *
 	 */
-	use OP_CORE;
+	use \OP_CORE;
 
 	/** Parse option.
 	 *
 	 * @param string $options
 	 */
-	static function _ParseOption($options=[])
+	static private function _ParseOption($options=[])
 	{
 		//	...
 		if( gettype($options) === 'string' ){
@@ -70,7 +76,7 @@ class QQL
 	 *
 	 * @param string $options
 	 */
-	static function _ParseOptionString($options)
+	static private function _ParseOptionString($options)
 	{
 		//	...
 		$result = null;
@@ -96,21 +102,59 @@ class QQL
 		return $result;
 	}
 
+	/** Execute Select.
+	 *
+	 * @param  array       $select
+	 * @param  \OP\UNIT\DB $_db
+	 * @return array       $record
+	 */
+	static private function _Execute($select, $_db)
+	{
+		//	...
+		foreach( ['database','table','field','where','order','limit','offset'] as $key ){
+			${$key} = $select[$key];
+		}
+
+		//	...
+		$query = "SELECT $field FROM $database $table $where $order $limit $offset";
+
+		//	"LIMIT 1" --> 1
+		$limit = (int)substr($limit, strpos($limit, ' ')+1);
+
+		//	...
+		if( $record = $_db->Query($query) ){
+			//	Success
+			$_db->Database($database);
+			$_db->Table($table);
+		}else{
+			//	Failure
+			return null;
+		}
+
+		//	QQL is " name <- t_table.id = $id " and limit is 1.
+		if( $limit === 1 and count($record) === 1 ){
+			return array_shift($record);
+		}
+
+		//	...
+		return $record;
+	}
+
 	/** Convert to SQL from QQL.
 	 *
-	 * @param  string $qql
-	 * @param  string $opt
-	 * @param  DB     $_db
-	 * @return string $sql
+	 * @param  string      $qql
+	 * @param  string      $opt
+	 * @param  \OP\UNIT\DB $_db
+	 * @return array       $sql
 	 */
-	static function Select($qql, $opt, $_db)
+	static private function _Select($qql, $opt, $_db)
 	{
-		$field = '*';
-		$db    = '';
-		$table = '';
-		$where = '';
-		$limit = '';
-		$order = '';
+		$field  = '*';
+		$dbname = '';
+		$table  = '';
+		$where  = '';
+		$limit  = '';
+		$order  = '';
 		$offset = '';
 
 		//	field
@@ -124,6 +168,16 @@ class QQL
 					$join[] = $_db->Quote($temp);
 				}
 				$field = join(',', $join);
+			}else
+			if( $st = strpos($field, '(') and
+				$en = strpos($field, ')') ){
+				//	func(field) --> FUNC('field')
+				$func  = substr($field, 0, $st);				// func( field ) --> func
+				$field = substr($field, $st +1, $en - $st -1);	// func( field ) --> " field "
+				$field = trim($field);							// " field "     --> "field"
+				$field = $_db->Quote($field);					// field         --> 'field'
+				$func  = strtoupper($func);						// func          --> FUNC
+				$field = "$func($field)";						//               --> func('field')
 			}else{
 				//	Single field.
 				$field = $_db->Quote($field);
@@ -143,7 +197,7 @@ class QQL
 		if( $pos === false ){
 			$db_table = trim($qql);
 		}else{
-			$where    = 1;
+			$where    = true;
 			$db_table = trim(substr($qql, 0, $pos));
 			$evalu    = trim(substr($qql, $pos, 2));
 			$value    = trim(substr($qql, $pos +2));
@@ -162,7 +216,7 @@ class QQL
 						$which = $temp[1];
 						break;
 					case 3:
-						$db    = $temp[0];
+						$dbname= $temp[0];
 						$table = $temp[1];
 						$which = $temp[2];
 						break;
@@ -178,7 +232,7 @@ class QQL
 						$table = trim($temp);
 						break;
 					case 2:
-						$db    = $temp[0];
+						$dbname= $temp[0];
 						$table = $temp[1];
 						break;
 					default:
@@ -188,32 +242,36 @@ class QQL
 		}
 
 		//	...
-		if( $db ){
-			$table = $_db->Quote($db).'.'.$_db->Quote($table);
-		}else{
-			$table = $_db->Quote($table);
-		}
+		$dbname = $dbname ? $_db->Quote($dbname).'.': null;
+		$table  = $_db->Quote($table);
 
 		//	...
 		list($limit, $order, $offset) = self::_ParseOption($opt);
 
 		//	...
-		$query = "SELECT $field FROM $table $where $order $limit $offset";
+		return [
+			'database' => $dbname,
+			'table'    => $table,
+			'field'    => $field,
+			'where'    => $where,
+			'order'    => $order,
+			'limit'    => $limit,
+			'offset'   => $offset
+		];
+	}
 
-		//	"LIMIT 1" --> 1
-		$limit = (int)substr($limit, strpos($limit, ' ')+1);
-
-		//	...
-		if(!$record = $_db->Query($query)){
-			return null;
-		}
-
-		//	QQL is " name <- t_table.id = $id " and limit is 1.
-		if( $limit === 1 and count($record) === 1 ){
-			return array_shift($record);
-		}
-
-		//	...
-		return $record;
+	/** Execute QQL.
+	 *
+	 * @param  string      $qql
+	 * @param  string      $opt
+	 * @param  \OP\UNIT\DB $_db
+	 * @return array       $record
+	 */
+	static function Execute($qql, $opt, $_db)
+	{
+		return self::_Execute(
+			self::_Select($qql, $opt, $_db),
+			$_db
+		);
 	}
 }
