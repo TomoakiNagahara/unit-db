@@ -11,9 +11,9 @@
 
 /** namespace
  *
- * @created   2017-12-18
+ * @created   2018-01-29
  */
-namespace OP\UNIT\DB;
+namespace OP\UNIT;
 
 /** DB
  *
@@ -110,7 +110,7 @@ class DB
 		}
 
 		//	Initialize variable. (初始化变量, 初始化變量)
-		foreach(['driver','host','user','password','charset'] as $key){
+		foreach(['driver','host','port','user','password','charset'] as $key){
 			if( isset($config[$key]) ){
 				$this->_config[$key] = ${$key} = $config[$key];
 			}else{
@@ -133,7 +133,11 @@ class DB
 
 		//	Select the database. (选择数据库, 選擇數據庫)
 		if( isset($config['database']) ){
+			//	...
 			$dsn .= ";dbname={$config['database']}";
+
+			//	...
+			$this->_config['database'] = $config['database'];
 		}
 
 		//	...
@@ -155,15 +159,15 @@ class DB
 
 		//	...
 		switch( $driver ){
-				case 'mysql':
-					if(!self::_GetDsnMySQL($config, $dsn, $user, $password, $options) ){
-						return false;
-					}
-					break;
-
-				default:
-					\Notice::Set("This driver has not been supported yet. ($driver)");
+			case 'mysql':
+				if(!self::_GetDsnMySQL($config, $dsn, $user, $password, $options) ){
 					return false;
+				}
+				break;
+
+			default:
+				\Notice::Set("This driver has not been supported yet. ($driver)");
+			return false;
 		}
 
 		//	...
@@ -178,6 +182,15 @@ class DB
 
 		//	...
 		return $this->_connection;
+	}
+
+	/** Get product name.
+	 *
+	 * @return string $product
+	 */
+	function Product()
+	{
+		return $this->Driver();
 	}
 
 	/** Get product name.
@@ -205,6 +218,45 @@ class DB
 	function Port()
 	{
 		return $this->_config['port'];
+	}
+
+	/** Get last time used database name.
+	 *
+	 * @param  string $database
+	 * @return string $database
+	 */
+	function Database($database=null)
+	{
+		if( $database ){
+			//	...
+			$this->_config['database'] = $database;
+
+			//	...
+			$database = $this->_pdo->quote($database);
+
+			//	...
+			$this->Query("use $database", 'use');
+		}
+
+		//	...
+		return $this->_config['database'];
+	}
+
+	/** Get last time used table name.
+	 *
+	 * @param  string $table
+	 * @return string $table
+	 */
+	function Table($table=null)
+	{
+		//	...
+		if( $table ){
+			//	...
+			$this->_config['table'] = $table;
+		}
+
+		//	...
+		return ifset($this->_config['table']);
 	}
 
 	/** Get PDO instance.
@@ -237,6 +289,7 @@ class DB
 	/** Execute sql query.
 	 *
 	 * @param  string $query
+	 * @param  string $type  select, insert, update, delete, create, show
 	 * @return boolean|integer|array
 	 */
 	function Query($query, $type=null)
@@ -269,51 +322,7 @@ class DB
 		//	...
 		switch( strtolower($type) ){
 			case 'show':
-				//	...
-				$column = strpos($query, 'SHOW FULL COLUMNS FROM') === 0 ? true: false;
-				$index  = strpos($query, 'SHOW INDEX FROM')        === 0 ? true: false;
-
-				//	...
-				foreach( $statement->fetchAll(\PDO::FETCH_ASSOC) as $temp ){
-					if( $column ){
-						$name = $temp['Field'];
-						foreach( $temp as $key => $val ){
-							//	...
-							$key = lcfirst($key);
-
-							//	...
-							if( $st = strpos($val, '(') and $en = strpos($val, ')') ){
-								$type   = substr($val, 0, $st);
-								$length = substr($val, $st+1, $en - $st -1 );
-								$length = (int)$length;
-								$result[$name]['type']   = $type;
-								$result[$name]['length'] = $length;
-								continue;
-							}
-
-							//	...
-							if( $key === 'null' ){
-								$val = $val === 'YES' ? true: false;
-							}
-
-							//	...
-							if( $key === 'key' ){
-								$val = strtolower($val);
-							}
-
-							//	...
-							$result[$name][$key] = $val;
-						}
-					}else if( $index ){
-						$name = $temp['Key_name'];
-						$seq  = $temp['Seq_in_index'];
-						$result[$name][$seq] = $temp;
-					}else{
-						foreach( $temp as $key => $val ){
-							$result[] = $val;
-						}
-					}
-				}
+				$result = DB\Show::Get( $statement->fetchAll(\PDO::FETCH_ASSOC), $query );
 				break;
 
 			case 'select':
@@ -345,6 +354,10 @@ class DB
 
 			case 'set':
 				$result = true;
+				break;
+
+			case 'password':
+				$result = array_shift($statement->fetchAll(\PDO::FETCH_ASSOC)[0]);
 				break;
 
 			default:
@@ -384,19 +397,23 @@ class DB
 	 * </pre>
 	 *
 	 * @param  string $qql
+	 * @param  array  $options
 	 * @return array
 	 */
-	function Quick($qql, $option=[])
+	function QQL($qql, $options=[])
 	{
-		//	...
-		if(!class_exists('QQL', false)){
-			if(!include(__DIR__.'/QQL.class.php')){
-				return [];
-			}
-		}
+		return DB\QQL::Execute($qql, $options, $this);
+	}
 
-		//	...
-		return QQL::Select($qql, $option, $this);
+	/** Quick Query Language.
+	 *
+	 * @param  string $qql
+	 * @param  array  $options
+	 * @return array  $record
+	 */
+	function Quick($qql, $options=[])
+	{
+		return self::QQL($qql, $options);
 	}
 
 	/** Quote key string.
