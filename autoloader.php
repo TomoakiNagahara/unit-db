@@ -9,17 +9,19 @@
  * @copyright Tomoaki Nagahara All right reserved.
  */
 //	...
-spl_autoload_register( function($path){
+spl_autoload_register( function($name){
 	//	...
-	$namespace = 'OP\UNIT\DB\\';
+	$namespace = 'OP\UNIT\DB';
 
 	//	...
-	if( strpos($path, $namespace) !== 0 ){
+	if( $name === 'OP\UNIT\DB' ){
+		$name  =  'DB';
+	}else
+		if( strpos($name, $namespace) === 0 ){
+			$name = substr($name, strlen($namespace) +1);
+	}else{
 		return;
 	}
-
-	//	...
-	$name = substr($path, strlen($namespace));
 
 	//	...
 	$path = __DIR__."/{$name}.class.php";
