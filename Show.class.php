@@ -52,7 +52,7 @@ class Show
 					$key = lcfirst($key);
 
 					//	...
-					if( $st = strpos($val, '(') and $en = strpos($val, ')') ){
+					if( $key === 'type' and $st = strpos($val, '(') and $en = strpos($val, ')') ){
 						$type   = substr($val, 0, $st);
 						$length = substr($val, $st+1, $en - $st -1 );
 
