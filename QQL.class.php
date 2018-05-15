@@ -31,6 +31,12 @@ class QQL
 	 */
 	use \OP_CORE;
 
+	/** Configuration.
+	 *
+	 * @var array
+	 */
+	static private $_config;
+
 	/** Parse option.
 	 *
 	 * @param string $options
@@ -38,106 +44,20 @@ class QQL
 	static private function _ParseOption($options=[])
 	{
 		//	...
-		if( gettype($options) === 'string' ){
-			$options = self::_ParseOptionString($options);
-		}
-
-		//	...
-		$result = ['','',''];
-
-		//	...
-		foreach( $options as $key => $val ){
-			switch( $key = trim($key) ){
-				case 'limit':
-					$result[0] = 'LIMIT '.(int)$val;
-					break;
-
-				case 'order':
-					if( $pos = strpos($val, ' ') ){
-						$field = substr($val, 0, $pos);
-						$order = substr($val, $pos);
-						$result[1] = "ORDER BY `{$field}` $order";
-					}else{
-						$result[1] = "ORDER BY `{$val}`";
-					}
-					break;
-
-				case 'offset':
-					$result[2] = 'OFFSET '.(int)$val;
-					break;
+		if( is_string($options) === 'string' ){
+			foreach( explode(',', $options) as $option ){
+				list($key, $val) = explode('=', $option);
+				$options[trim($key)] = trim($val);
 			}
 		}
 
 		//	...
-		return $result;
-	}
-
-	/** Parse option string.
-	 *
-	 * @param string $options
-	 */
-	static private function _ParseOptionString($options)
-	{
-		//	...
-		$result = null;
-
-		//	...
-		foreach( explode(',', $options) as $option ){
-			//	...
-			$option = trim($option);
-
-			//	...
-			if( $pos = strpos($option, '=') ){
-				$key = substr($option, 0, $pos);
-				$val = substr($option, $pos +1);
-			}else{
-				continue;
-			}
-
-			//	...
-			$result[$key] = $val;
+		foreach(['limit','order','offset'] as $key){
+			$result[$key]  = empty($options[$key]) ? null: $options[$key];
 		}
 
 		//	...
 		return $result;
-	}
-
-	/** Execute Select.
-	 *
-	 * @param  array       $select
-	 * @param  \OP\UNIT\DB $_db
-	 * @return array       $record
-	 */
-	static private function _Execute($select, $_db)
-	{
-		//	...
-		foreach( ['database','table','field','where','order','limit','offset'] as $key ){
-			${$key} = $select[$key];
-		}
-
-		//	...
-		$query = "SELECT $field FROM $database $table $where $order $limit $offset";
-
-		//	"LIMIT 1" --> 1
-		$limit = (int)substr($limit, strpos($limit, ' ')+1);
-
-		//	...
-		if( $record = $_db->Query($query) ){
-			//	Success
-			$_db->Database($database);
-			$_db->Table($table);
-		}else{
-			//	Failure
-			return null;
-		}
-
-		//	QQL is " name <- t_table.id = $id " and limit is 1.
-		if( $limit === 1 and count($record) === 1 ){
-			return array_shift($record);
-		}
-
-		//	...
-		return $record;
 	}
 
 	/** Convert to SQL from QQL.
@@ -147,15 +67,15 @@ class QQL
 	 * @param  \OP\UNIT\DB $_db
 	 * @return array       $sql
 	 */
-	static private function _Select($qql, $opt, $_db)
+	static private function _Parse($qql, $opt, $_db)
 	{
 		$field  = '*';
-		$dbname = '';
-		$table  = '';
-		$where  = '';
-		$limit  = '';
-		$order  = '';
-		$offset = '';
+		$dbname = null;
+		$table  = null;
+		$where  = null;
+		$limit  = null;
+		$order  = null;
+		$offset = null;
 
 		//	field
 		if( $pos = strpos($qql, '<-') ){
@@ -246,7 +166,33 @@ class QQL
 		$table  = $_db->Quote($table);
 
 		//	...
-		list($limit, $order, $offset) = self::_ParseOption($opt);
+		foreach( $opt as $key => $val ){
+			//	...
+			if( empty($val) ){
+				continue;
+			}
+
+			//	...
+			switch( $key = trim($key) ){
+				case 'limit':
+					$limit = 'LIMIT '.(int)$val;
+					break;
+
+				case 'order':
+					if( $pos   = strpos($val, ' ') ){
+						$fiel_ = substr($val, 0, $pos);
+						$order = substr($val, $pos);
+						$order = "ORDER BY `{$fiel_}` $order";
+					}else{
+						$order = "ORDER BY `{$val}`";
+					}
+					break;
+
+				case 'offset':
+					$offset = 'OFFSET '.(int)$val;
+					break;
+			}
+		}
 
 		//	...
 		return [
@@ -254,24 +200,89 @@ class QQL
 			'table'    => $table,
 			'field'    => $field,
 			'where'    => $where,
-			'order'    => $order,
 			'limit'    => $limit,
-			'offset'   => $offset
+			'order'    => $order,
+			'offset'   => $offset,
 		];
+	}
+
+	/** Execute Select.
+	 *
+	 * @param	 array		 $config
+	 * @param	\IF_DETABASE $DB
+	 * @return	 array		 $record
+	 */
+	static private function _Build($select, $_db)
+	{
+		//	...
+		foreach( ['database','table','field','where','order','limit','offset'] as $key ){
+			${$key} = $select[$key];
+		}
+
+		//	...
+		$query = "SELECT $field FROM $database $table $where $order $limit $offset";
+
+		//	...
+		return $query;
+	}
+
+	/** Return configuration.
+	 *
+	 * @return	 array		 $config
+	 */
+	static function Config()
+	{
+		return self::$_config;
 	}
 
 	/** Execute QQL.
 	 *
-	 * @param  string      $qql
-	 * @param  string      $opt
-	 * @param  \OP\UNIT\DB $_db
-	 * @return array       $record
+	 * @param	 string		 $qql
+	 * @param	 string		 $opt
+	 * @param	\IF_DATABASE $_db
+	 * @return	 array		 $record
 	 */
 	static function Execute($qql, $opt, $_db)
 	{
-		return self::_Execute(
-			self::_Select($qql, $opt, $_db),
-			$_db
-		);
+		//	...
+		$opt = self::_ParseOption($opt);
+
+		//	...
+		self::$_config = self::_Parse($qql, $opt, $_db);
+
+		//	...
+		$query = self::_Build(self::$_config, $_db);
+
+		//	...
+		if( $records = $_db->Query($query, 'select') ){
+			//	Success
+			$_db->Database(self::$_config['database']);
+			$_db->Table(   self::$_config['table']   );
+		}else{
+			//	Failure
+			return [];
+		}
+
+		//	QQL is " name <- t_table.id = $id " and limit is 1.
+		if( ifset($opt['limit']) === 1 and count($records) === 1 ){
+			$record = array_shift($records);
+		}
+
+		//	...
+		if( self::$_config['field'] !== '*' and strpos(self::$_config['field'], ',') === false ){
+			//	...
+			$quote = self::$_config['field'][0];
+
+			//	...
+			$field = trim(self::$_config['field'], $quote);
+
+			//	...
+			foreach( $records as $temp ){
+				$record[] = $temp[$field];
+			}
+		}
+
+		//	...
+		return $record ?? $records;
 	}
 }
