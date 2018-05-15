@@ -88,7 +88,7 @@ class DB
 				break;
 
 			default:
-				throw new Exception("This product has not been supported. ({$this->_config['driver']})");
+				throw new \Exception("This product has not been supported. ({$this->_config['driver']})");
 				break;
 		}
 
@@ -175,7 +175,7 @@ class DB
 			$this->_queries[] = $dsn;
 			$this->_pdo = new \PDO($dsn, $user, $password, $options);
 			$this->_connection = true;
-		}catch(Throwable $e){
+		}catch( \Throwable $e ){
 			$this->_connection = false;
 			\Notice::Set($e->getMessage() . " ($dsn, $user)");
 		}
